@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug/temp files
+debug_links.py
+
+# Original HTML (too large for repo)
+*.html
+
+# Original placeholder (already in tool_images/)
+advanced_tool_original.png
