@@ -154,6 +154,13 @@ def build_docx(elements):
     """Build the .docx document."""
     doc = Document()
 
+    # Document metadata (carried to PDF by LibreOffice)
+    doc.core_properties.title = "60 Best Free Open Source Software"
+    doc.core_properties.author = "Claudio Junior"
+    doc.core_properties.subject = "A curated catalog of the best free and open source software tools"
+    doc.core_properties.keywords = "open source, free software, linux, tools, catalog"
+    doc.core_properties.category = "Technology"
+
     # Page margins
     for section in doc.sections:
         section.top_margin = PAGE_MARGIN
@@ -370,11 +377,11 @@ def build_docx(elements):
                 el_index + 1 < len(elements)
                 and elements[el_index + 1]["type"] == "image"
             )
-            is_last_tool = all(
-                elements[k]["type"] in ("hr", "table_header", "table_row")
+            has_more_tools = any(
+                elements[k]["type"] in ("tool_heading", "category")
                 for k in range(el_index + 1, len(elements))
             )
-            if not next_is_image and not is_last_tool:
+            if not next_is_image and has_more_tools:
                 p_break = doc.add_paragraph()
                 run_break = p_break.add_run()
                 run_break.add_break(WD_BREAK.PAGE)
@@ -397,9 +404,13 @@ def build_docx(elements):
                         stream.close()
 
             # Page break after image (one tool per page)
-            # But skip if this is the last element to avoid blank page
+            # Skip if no more tools ahead to avoid blank last page
             el_index = elements.index(el)
-            if el_index < len(elements) - 1:
+            has_more_tools = any(
+                elements[k]["type"] in ("tool_heading", "category")
+                for k in range(el_index + 1, len(elements))
+            )
+            if has_more_tools:
                 p_break = doc.add_paragraph()
                 run_break = p_break.add_run()
                 run_break.add_break(WD_BREAK.PAGE)
