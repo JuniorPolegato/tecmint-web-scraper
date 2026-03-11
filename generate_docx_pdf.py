@@ -95,6 +95,51 @@ def remove_paragraph_spacing(paragraph):
     pf.line_spacing = Pt(12)
 
 
+def add_hyperlink(paragraph, url, text, font_size=Pt(9)):
+    """Add a real clickable hyperlink to a paragraph."""
+    from docx.oxml import OxmlElement
+
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+
+    # InternetLink style — required by LibreOffice for PDF hyperlinks
+    rStyle = OxmlElement("w:rStyle")
+    rStyle.set(qn("w:val"), "InternetLink")
+    rPr.append(rStyle)
+
+    c = OxmlElement("w:color")
+    c.set(qn("w:val"), "0869DA")
+    rPr.append(c)
+
+    u = OxmlElement("w:u")
+    u.set(qn("w:val"), "single")
+    rPr.append(u)
+
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), str(int(font_size.pt * 2)))
+    rPr.append(sz)
+    szCs = OxmlElement("w:szCs")
+    szCs.set(qn("w:val"), str(int(font_size.pt * 2)))
+    rPr.append(szCs)
+
+    new_run.append(rPr)
+    new_run.text = text
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+
+
+
 def parse_table_md(md_file):
     """Parse table.md and extract structure: headings, categories, tools."""
     with open(md_file, "r", encoding="utf-8") as f:
@@ -310,10 +355,7 @@ def build_docx(elements):
             for part in parts:
                 link_match = re.match(r'\[([^\]]+)\]\(([^)]+)\)', part)
                 if link_match:
-                    run = p.add_run(link_match.group(1))
-                    run.font.color.rgb = RGBColor(0x08, 0x69, 0xDA)
-                    run.font.size = Pt(9)
-                    run.italic = True
+                    add_hyperlink(p, link_match.group(2), link_match.group(1), font_size=Pt(9))
                 else:
                     run = p.add_run(part)
                     run.font.size = Pt(9)
@@ -366,26 +408,7 @@ def build_docx(elements):
                 if idx > 0:
                     run = p.add_run(" | ")
                     run.font.size = Pt(9)
-                run = p.add_run(text)
-                run.font.size = Pt(9)
-                run.font.color.rgb = RGBColor(0x08, 0x69, 0xDA)
-                run.underline = True
-
-            # If next element is NOT an image, add page break here
-            el_index = elements.index(el)
-            next_is_image = (
-                el_index + 1 < len(elements)
-                and elements[el_index + 1]["type"] == "image"
-            )
-            has_more_tools = any(
-                elements[k]["type"] in ("tool_heading", "category")
-                for k in range(el_index + 1, len(elements))
-            )
-            if not next_is_image and has_more_tools:
-                p_break = doc.add_paragraph()
-                run_break = p_break.add_run()
-                run_break.add_break(WD_BREAK.PAGE)
-                remove_paragraph_spacing(p_break)
+                add_hyperlink(p, url, text, font_size=Pt(9))
 
         elif t == "image":
             p = doc.add_paragraph()
